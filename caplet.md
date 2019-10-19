@@ -1,6 +1,8 @@
 # Description
 
-[A2]
+[B2]
+## Summary
+
 [text]
 The following sheet demonstrates creating a QuantSA zero curve and 
 calling the Black formula
@@ -25,16 +27,16 @@ accrueStartDate,2018-10-27
 accrueEndDate,2019-01-27
 
 ## Black Formula
-strike,=C17
-timeToExercise,=QSA.GetYearFraction(valueDate,settlementDate,"ACT365")
-forward,=QSA.GetSimpleForward(zarCurve,accrueStartDate,accrueEndDate)
+strike,=forward[0.00%]
+timeToExercise,=QSA.GetYearFraction(valueDate,settlementDate,"ACT365")[0.00]
+forward,=QSA.GetSimpleForward(zarCurve,accrueStartDate,accrueEndDate)[0.00%]
 vol,15%
-discountFactor,=QSA.GetDF(zarCurve,settlementDate)
-accrualFraction,=QSA.GetYearFraction(accrueStartDate,accrueEndDate)
+discountFactor,=QSA.GetDF(zarCurve,settlementDate)[0.00]
+accrualFraction,=QSA.GetYearFraction(accrueStartDate,accrueEndDate)[0.00]
 	
-caplet value,=1000000*accrualFraction*QSA.FormulaBlack(callOrPut,strike,timeToExercise,forward,vol,discountfactor)
+caplet value,=1000000*accrualFraction*QSA.FormulaBlack(callOrPut,strike,timeToExercise,forward,vol,discountFactor)[0.00]
 
-[G2]
+[E2]
 [table_c]
 dates, continuousRates
 2018-07-27,7.10%
@@ -43,4 +45,4 @@ dates, continuousRates
 [endtable_c]
 
 [create_h]
-zarCurve,=QSA.CreateDatesAndRatesCurve("name",dates,continuousRates)
+zarCurve,=QSA.CreateDatesAndRatesCurve(**,dates,continuousRates)

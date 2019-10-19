@@ -1,15 +1,10 @@
-import openpyxl
-import styler
-from openpyxl.utils import coordinate_from_string, column_index_from_string, get_column_letter
-from openpyxl.worksheet.datavalidation import DataValidation
 from datetime import datetime
 
+import openpyxl
+from openpyxl.utils import coordinate_from_string, column_index_from_string, get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
 
-def a1_to_rc(a1):
-    xy = coordinate_from_string(a1)
-    col = column_index_from_string(xy[0])
-    row = xy[1]
-    return row, col
+import styler
 
 
 class WorkBookMaker:
@@ -20,8 +15,7 @@ class WorkBookMaker:
         self.wb = openpyxl.Workbook()
         for sheetName in self.wb.sheetnames:
             del self.wb[sheetName]
-        self.scalars = {}
-        self.ranges = {}
+        self.variables = {}
         self.formulas = []
         self.r = 1
         self.c = 1
@@ -55,11 +49,16 @@ class WorkBookMaker:
             # a table of columns, will continue to [endtable_c]
             elif line.startswith("[table_c]"):
                 self.__process_table_c()
+            # a horizontal create with the object alias to the left
+            elif line.startswith("[create_h]"):
+                self.__process_create_h()
             else:
                 self.__add_values(line)
         self.__update_formulas()
 
     def save(self):
+        """ Save the workbook. Call after process
+        """
         self.wb.save(fname_xls)
 
     def __update_formulas(self):
@@ -67,34 +66,52 @@ class WorkBookMaker:
         """
         for f in self.formulas:
             value = f.formula
-            for key in self.scalars.keys():
+            for key in self.variables.keys():
                 if value.find(key) > -1:
-                    value = value.replace(key, self.scalars[key])
-                    print(f"replacing {key} with {self.scalars[key]} : {value} ")
+                    value = value.replace(key, self.variables[key])
+                    print(f"replacing {key} with {self.variables[key]} : {value} ")
             ws = self.wb[f.sheet]
             ws.cell(f.row, f.col, value)
 
     def __add_values(self, line):
+        """ Handle a comma separated pair and put each of the pair items next to each other
+
+        :param line:
+        """
         first = line.find(',')
         if first < 0:
             self.__line_error(line)
         part0 = line[:first]
-        part1 = line[first + 1:]
+        part1 = line[first + 1:].replace(' ', '')
         cell = self.__cell()
         cell.value = part0
         styler.label(cell)
         cell = self.__cell(1)
+        value_format = "0.00"
         if part1.strip()[0] == "=":
+            part1 = part1.strip()
+            ind = part1.find('[')
+            if ind > - 1:
+                value_format = part1[ind + 1:-1]
+                part1 = part1[:ind]
             print(f"formula: {part1}")
+
             self.formulas.append(Formula(self.ws.title, self.r, self.c + 1, part1))
             styler.formula(cell)
+            cell.number_format = value_format
         else:
             self.__set_value(cell, part1)
-            self.scalars[part0] = f"{get_column_letter(self.c + 1)}{self.r}"
             styler.value(cell)
+        self.variables[part0] = f"{get_column_letter(self.c + 1)}{self.r}"
         self.r += 1
 
     def __set_value(self, cell, str):
+        """ determine the number format of the value in str and add it to a cell
+
+        :param cell:
+        :param str:
+        :return: None
+        """
         str = str.strip()
         if str.endswith('%'):
             value = float(str[:-1]) / 100
@@ -110,8 +127,7 @@ class WorkBookMaker:
         if str.startswith('['):
             i0 = str.find('[')
             i1 = str.find(']')
-            list_str = str[i0:i1]
-            list_vals = list_str.split(',')
+            list_str = str[i0 + 1:i1]
             value = str[i1 + 1:]
             dv = DataValidation(type="list", formula1=f'"{list_str}"', allow_blank=False)
             dv.add(cell)
@@ -125,6 +141,9 @@ class WorkBookMaker:
         print(f"Can not process: {line}")
 
     def __process_text(self):
+        """ Handle a large block of formatted text. Intended to be used to describe the workbook.
+
+        """
         self.line_number += 1
         line = self.lines[self.line_number]
         while not line.startswith("[endtext]"):
@@ -136,12 +155,13 @@ class WorkBookMaker:
             line = self.lines[self.line_number]
         self.ws.column_dimensions[get_column_letter(self.c)].width = 100
 
-    def __cell(self, col_offset=None):
-        if col_offset is None:
-            c = 0
-        else:
-            c = col_offset
-        return self.ws.cell(row=self.r, column=self.c + c)
+    def __cell(self, col_offset=0):
+        """ Get the current cell reference that should be written to next.
+
+        :param col_offset: The offset to the right of the current column
+        :return: None
+        """
+        return self.ws.cell(row=self.r, column=self.c + col_offset)
 
     def __try_use_cell(self, line):
         if not line.startswith('['):
@@ -158,10 +178,68 @@ class WorkBookMaker:
             return False
 
     def __process_table_c(self):
-        pass
+        """ Process a table of columns
+
+        """
+        self.line_number += 1
+        line = self.lines[self.line_number]
+        headers = [h.strip() for h in line.split(',')]
+        for i in range(len(headers)):
+            cell = self.__cell(i)
+            cell.value = headers[i]
+            styler.label(cell)
+        self.r += 1
+
+        self.line_number += 1
+        line = self.lines[self.line_number]
+        start_row = self.r
+        while not line.startswith("[endtable_c]"):
+            values = [h.strip() for h in line.split(',')]
+            for i in range(len(values)):
+                cell = self.__cell(i)
+                self.__set_value(cell, values[i])
+                styler.value(cell)
+            self.line_number += 1
+            self.r += 1
+            line = self.lines[self.line_number]
+        end_row = self.r - 1
+
+        for i in range(len(headers)):
+            col = get_column_letter(self.c + i)
+            self.variables[headers[i]] = f"{col}{start_row}:{col}{end_row}"
+
+    def __range_name(self, r, c):
+        """ Get the range name from a row and column
+
+        :param r:
+        :param c:
+        :return: The range name in A1 format.
+        """
+        return f"{get_column_letter(c)}{r}"
+
+    def __process_create_h(self):
+        """ Horizontal object creation with alias to left.
+
+        :return: None
+        """
+
+        self.line_number += 1
+        parts = self.lines[self.line_number].strip().split(',', 1)
+        self.variables[parts[0]] = self.__range_name(self.r, self.c + 1)
+        cell = self.__cell()
+        cell.value = parts[0]
+        styler.obj_alias(cell)
+        create_formula = parts[1].replace('**', self.__range_name(self.r, self.c))
+        self.formulas.append(Formula(self.ws.title, self.r, self.c + 1, create_formula))
+        cell = self.__cell(1)
+        styler.obj_inst(cell)
+        self.line_number += 1
 
 
 class Formula:
+    """ The data required to store a formula and its location in the sheet.
+    """
+
     def __init__(self, sheet, row, col, formula):
         self.sheet = sheet
         self.row = row
