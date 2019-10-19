@@ -247,8 +247,8 @@ class Formula:
         self.formula = formula
 
 
-fname_markdown = "C:/Dev/python/xls_markdown/caplet.md"
-fname_xls = "C:/Dev/python/xls_markdown/caplet_test.xlsx"
+fname_markdown = "C:/Dev/python/xls_markdown/tiny_example.md"
+fname_xls = "C:/Dev/python/xls_markdown/tiny_example.xlsx"
 wbm = WorkBookMaker(fname_markdown, fname_xls)
 wbm.process()
 wbm.save()
