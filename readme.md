@@ -77,7 +77,7 @@ which produces:
 ## Bigger Example
 
 Several useful features are supported at the moment and these can be seen in 
-[caplet.md](https://github.com/JamesLTaylor/xls_markdown/blob/master/caplet.md) which produces:
+[caplet.md](https://raw.githubusercontent.com/JamesLTaylor/xls_markdown/master/caplet.md) which produces:
 
 
 ![generated sheet](images/generated.PNG)
