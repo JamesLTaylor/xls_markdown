@@ -1,0 +1,34 @@
+
+Heading level 1 makes a sheet name
+#Description
+
+[A2]
+> The main description of what the sheet does and what functions it demonstrates or uses.
+>
+> The text here will be placed in a formatted block on the listed sheet and will uses
+> any wrapping that the mark down generator wants to
+
+
+
+
+#Headers
+
+
+vector input with label at top label, values
+
+scalar input with label to left : label, value/formula/reference
+
+table with column headers
+
+table with row headers
+
+table with row and column headers
+
+object creation
+
+
+reference cell =A2
+calc cell =1+1
+object creation cell =QSA.CreateDatesAndRatesCurve
+Sigma function call =QSA.FormulaBlack
+
